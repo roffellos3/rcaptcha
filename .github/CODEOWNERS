@@ -1,0 +1,15 @@
+# Default owners for everything in the repo
+* @roffellos3
+
+# Server code
+/server/ @roffellos3
+
+# Documentation
+/docs/ @roffellos3
+*.md @roffellos3
+
+# MCP Skill
+/skill/ @roffellos3
+
+# CI/CD
+/.github/ @roffellos3

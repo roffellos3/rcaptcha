@@ -1,0 +1,38 @@
+{
+  "name": "rcaptcha-server",
+  "version": "1.0.0",
+  "description": "rCAPTCHA verification server - Human verification via robots.txt (reverse CAPTCHA for AI agents)",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roffellos3/rcaptcha.git"
+  },
+  "keywords": [
+    "captcha",
+    "verification",
+    "ai",
+    "robots.txt",
+    "authentication"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/roffellos3/rcaptcha/issues"
+  },
+  "homepage": "https://github.com/roffellos3/rcaptcha#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
