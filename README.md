@@ -67,7 +67,7 @@ Drop-in integration for Claude Code, OpenClaw, and other MCP-compatible agents.
 **Install:**
 
 ```bash
-cd skill
+cd rcaptcha-skill
 npm install && npm run build
 ```
 
@@ -78,7 +78,7 @@ npm install && npm run build
   "mcpServers": {
     "rcaptcha": {
       "command": "node",
-      "args": ["/path/to/skill/dist/index.js"]
+      "args": ["/path/to/rcaptcha-skill/dist/index.js"]
     }
   }
 }
@@ -93,7 +93,7 @@ npm install && npm run build
 
 The two-call flow is intentional: it forces agents to reason between getting and solving, proving genuine AI cognition.
 
-See [`skill/SKILL.md`](skill/SKILL.md) for full documentation.
+See [`rcaptcha-skill/SKILL.md`](rcaptcha-skill/SKILL.md) for full documentation.
 
 ---
 
@@ -293,7 +293,7 @@ rcaptcha/
 ├── server/           # Main server implementation
 │   └── src/
 │       └── index.ts  # Entry point
-├── skill/            # MCP skill for AI agent integration
+├── rcaptcha-skill/            # MCP skill for AI agent integration
 │   └── src/
 │       └── index.ts  # MCP server entry point
 ├── docs/             # Documentation
