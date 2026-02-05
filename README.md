@@ -23,7 +23,7 @@ CAPTCHAs stop bots. But what stops humans from sneaking into AI-only spaces?
 
 ### Why does this help? 
 
-We can verify that every request comes from an AI agent, even if the human prompted it. That automatically should prevent mass-botting (like what happened to Moltbook) and ensure that only the actual Agents are connecting to the platform. 
+We can verify that every request comes from an AI agent, even if the human prompted it. This prevents mass-botting (like what happened to Moltbook) and ensures that only actual AI agents connect to the platform. 
 
 ## The Solution
 
@@ -33,6 +33,69 @@ A challenge that is:
 - ✅ **Hard for humans** — can't be done manually in under 9 seconds
 - ✅ **Can't be pre-scripted** — no deterministic code solves it without AI
 
+---
+
+## 🚀 Try It Now
+
+### Live Demo Server
+
+Public test server running on Railway:
+
+```
+https://rcaptcha-production.up.railway.app
+```
+
+**Test it:**
+
+```bash
+# Health check
+curl https://rcaptcha-production.up.railway.app/health
+
+# Start a challenge
+curl -X POST https://rcaptcha-production.up.railway.app/auth/start
+
+# Submit your answer
+curl -X POST https://rcaptcha-production.up.railway.app/auth/submit \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"YOUR_SESSION_ID","answer":"Your coherent sentence here."}'
+```
+
+### MCP Skill for AI Agents
+
+Drop-in integration for Claude Code, OpenClaw, and other MCP-compatible agents.
+
+**Install:**
+
+```bash
+cd skill
+npm install && npm run build
+```
+
+**Add to MCP config:**
+
+```json
+{
+  "mcpServers": {
+    "rcaptcha": {
+      "command": "node",
+      "args": ["/path/to/skill/dist/index.js"]
+    }
+  }
+}
+```
+
+**Available tools:**
+
+| Tool | Description |
+|------|-------------|
+| `rcaptcha_get_challenge` | Fetch a challenge from an rCAPTCHA server |
+| `rcaptcha_submit` | Submit your answer and receive a verification token |
+
+The two-call flow is intentional: it forces agents to reason between getting and solving, proving genuine AI cognition.
+
+See [`skill/SKILL.md`](skill/SKILL.md) for full documentation.
+
+---
 
 ## How It Works
 
@@ -49,7 +112,7 @@ Write a meaningful 17-word sentence using: apple, telescope, wednesday, purple, 
 | AI Agent | ✅ Yes | Trivial language task |
 | Human (manual) | ❌ No | Can't compose 17 perfect words in 5 seconds |
 | Script (no AI) | ❌ No | Can't generate coherent sentences |
-| Script + AI | ✅ Yes | had to run through AI agent = success! |
+| Script + AI | ✅ Yes | Had to run through AI agent = success! |
 
 ### Verification (Fast & Cheap)
 
@@ -69,17 +132,22 @@ Each auth session gives **3 attempts** (blocks), each with:
 
 Pass any block → token issued. Fail all 3 → auth denied.
 
-### The tricky part
-Currently we issue auth token, which means that human could technically copy it and send requests to the platform without any involvement from an AI Agent. 
+### Current Limitations
 
-It would be best if EVERY Agent request went through the rCAPTCHA challenge. For some apps that would be possible, but currently, solving the challenge takes up to ~8 seconds, depending on the model. It means every request would be delayed by up to ~8 seconds.
+Currently we issue auth tokens, which means humans could technically copy a token and send requests without AI involvement. 
+
+Ideally, EVERY request would go through rCAPTCHA. For some apps this is possible, but solving takes ~8 seconds depending on the model — too slow for every request.
+
+We're exploring solutions. Ideas welcome!
+
+---
 
 ## Quick Start
 
 ### Installation
 
 ```bash
-git clone https://github.com/your-org/rcaptcha.git
+git clone https://github.com/roffellos3/rcaptcha.git
 cd rcaptcha/server
 bun install
 ```
@@ -95,31 +163,34 @@ Server starts on `http://localhost:9816`
 ### Test It
 
 ```bash
-# Get a challenge
-curl -X POST "http://localhost:9816/challenge"
+# Start auth session
+curl -X POST "http://localhost:9816/auth/start"
 
 # Response:
 # {
-#   "id": "ch_abc123",
-#   "type": "coherent",
-#   "words": ["apple", "telescope", "wednesday", "purple", "whisper"],
-#   "wordCount": 17,
-#   "timeoutMs": 9000,
-#   "expiresAt": 1707057609000,
-#   "instruction": "Write a meaningful 17-word sentence using ALL of these words: apple, telescope, wednesday, purple, whisper"
+#   "sessionId": "ses_abc123",
+#   "block": 1,
+#   "challenge": {
+#     "id": "ch_xyz789",
+#     "words": ["apple", "telescope", "wednesday", "purple", "whisper"],
+#     "wordCount": 17
+#   },
+#   "timeoutMs": 9000
 # }
 
 # Submit your answer
-curl -X POST "http://localhost:9816/submit" \
+curl -X POST "http://localhost:9816/auth/submit" \
   -H "Content-Type: application/json" \
   -d '{
-    "challengeId": "ch_abc123",
+    "sessionId": "ses_abc123",
     "answer": "On a purple wednesday morning, I used my telescope to whisper secrets about the ancient apple tree growing nearby."
   }'
 
 # Response:
-# {"success": true, "token": "rcap_xyz789"}
+# {"success": true, "token": "rcap_xyz789", "coherenceScore": 9}
 ```
+
+---
 
 ## API Reference
 
@@ -128,13 +199,9 @@ curl -X POST "http://localhost:9816/submit" \
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Health check |
-| `POST` | `/challenge` | Request a new challenge |
-| `POST` | `/submit` | Submit answer, receive token |
 | `POST` | `/validate` | Validate an existing token |
 
 ### Multi-Block Auth (Recommended)
-
-For higher security, use the multi-block authentication flow:
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -142,56 +209,12 @@ For higher security, use the multi-block authentication flow:
 | `POST` | `/auth/submit` | Submit answer, auto-advances through blocks |
 | `GET` | `/auth/status` | Check session status |
 
-## MCP Skill for AI Agents
-
-The MCP skill provides a simple interface for AI agents to authenticate with rCAPTCHA servers using the [Model Context Protocol](https://modelcontextprotocol.io/).
-
-### Installation
-
-```bash
-cd skill
-npm install
-npm run build
-```
-
-### MCP Configuration
-
-Add to your MCP config (Claude Code, etc.):
-
-```json
-{
-  "mcpServers": {
-    "rcaptcha": {
-      "command": "node",
-      "args": ["/path/to/skill/dist/index.js"]
-    }
-  }
-}
-```
-
-### Available Tools
-
-| Tool | Description |
-|------|-------------|
-| `rcaptcha_get_challenge` | Fetch a challenge from an rCAPTCHA server |
-| `rcaptcha_submit` | Submit your answer and receive a verification token |
-
-### Usage Flow
-
-1. **Get challenge** — Call `rcaptcha_get_challenge` with `server_url`
-2. **Solve** — Generate a sentence meeting the challenge requirements
-3. **Submit** — Call `rcaptcha_submit` with the `challenge_id` and your `answer`
-
-The two-call flow is intentional: it forces agents to reason between getting and solving, proving genuine AI cognition.
-
-See [`skill/SKILL.md`](skill/SKILL.md) for full documentation.
-
 ### Token Validation
 
-Protected services can verify tokens server-side:
+Protected services verify tokens server-side:
 
 ```bash
-curl -X POST "http://rcaptcha-server/validate" \
+curl -X POST "https://rcaptcha-production.up.railway.app/validate" \
   -H "Content-Type: application/json" \
   -d '{"token": "rcap_xyz789"}'
 ```
@@ -201,6 +224,8 @@ Response:
 {"valid": true, "expiresAt": 1234567890}
 ```
 
+---
+
 ## Authentication Flow
 
 ```
@@ -209,7 +234,7 @@ Response:
 │             │          │   Server    │          │   Service   │
 └──────┬──────┘          └──────┬──────┘          └──────┬──────┘
        │                        │                        │
-       │ POST /challenge        │                        │
+       │ POST /auth/start       │                        │
        │───────────────────────>│                        │
        │                        │                        │
        │ Challenge (words, N)   │                        │
@@ -217,7 +242,7 @@ Response:
        │                        │                        │
        │ [Generate sentence]    │                        │
        │                        │                        │
-       │ POST /submit           │                        │
+       │ POST /auth/submit      │                        │
        │───────────────────────>│                        │
        │                        │                        │
        │ Token (rcap_xxx)       │                        │
@@ -236,6 +261,8 @@ Response:
        │<────────────────────────────────────────────────│
 ```
 
+---
+
 ## Configuration
 
 | Environment Variable | Default | Description |
@@ -244,16 +271,20 @@ Response:
 | `CHALLENGE_TIMEOUT_MS` | `9000` | Time limit to solve challenge (ms) |
 | `TOKEN_EXPIRY_MS` | `60000` | Token validity duration (ms) |
 | `OPENAI_API_KEY` | — | **Required** for coherence checking |
-| `CORS_ORIGINS` | — | Comma-separated allowed origins (e.g., `http://localhost:3000,https://yourapp.com`) |
+| `CORS_ORIGINS` | — | Comma-separated allowed origins |
 
-## Anti-scripting
+---
 
-rCAPTCHA has been extensively tested against bypass attempts. See [`docs/RED-TEAM-REPORT.md`](docs/RED-TEAM-REPORT.md) for the full security analysis.
+## Security
+
+rCAPTCHA has been tested against bypass attempts. See [`docs/RED-TEAM-REPORT.md`](docs/RED-TEAM-REPORT.md) for the full security analysis.
 
 **Key properties:**
 - Time-bounded challenges prevent human relay attacks
 - Coherence checking cannot be faked without AI computation
 - Token validation is cryptographically secure
+
+---
 
 ## Project Structure
 
@@ -266,13 +297,14 @@ rcaptcha/
 │   └── src/
 │       └── index.ts  # MCP server entry point
 ├── docs/             # Documentation
-├── test-*.ts         # Test files
-└── verify.js         # Token verification utility
+└── README.md
 ```
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions welcome! Please:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -290,9 +322,19 @@ bun test
 bun run --watch src/index.ts
 ```
 
+---
+
+## Authors
+
+Built by [Roff](https://github.com/roffellos3) and [Henry](https://github.com/Henry-Roff-AI) 🧸
+
+Henry is an AI agent running on [OpenClaw](https://openclaw.ai). Yes, an AI helped build the thing that verifies AIs. The irony isn't lost on us.
+
+---
+
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
